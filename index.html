@@ -1,0 +1,1726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic Frameworks — A Visual Deep Dive</title>
+    <style>
+        /* ═══════════════════════════════════════════════════════════════
+           RESET & BASE — matches LLM Agents guide dark theme
+           ═══════════════════════════════════════════════════════════════ */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg:        #0a0a0f;
+            --bg-card:   #12121a;
+            --bg-code:   #1a1a2e;
+            --border:    #2a2a3e;
+            --text:      #c8c8d4;
+            --text-dim:  #7a7a8e;
+            --heading:   #e8e8f0;
+            --accent:    #6c63ff;
+            --accent2:   #00d4aa;
+            --accent3:   #ff6b6b;
+            --accent4:   #ffd93d;
+            --glow:      rgba(108, 99, 255, 0.25);
+        }
+
+        html { scroll-behavior: smooth; font-size: 16px; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        ::selection { background: var(--accent); color: #fff; }
+
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        /* ═══════════════════════════════════════════════════════════════
+           HERO
+           ═══════════════════════════════════════════════════════════════ */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 800px;
+        }
+
+        .hero .tag {
+            display: inline-block;
+            font-size: 0.75rem;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            border-radius: 999px;
+            padding: 0.35rem 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.4rem, 6vw, 4rem);
+            font-weight: 800;
+            color: var(--heading);
+            line-height: 1.15;
+            margin-bottom: 1rem;
+        }
+        .hero h1 em {
+            font-style: normal;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            color: var(--text-dim);
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+
+        .hero .cta {
+            display: inline-block;
+            background: var(--accent);
+            color: #fff;
+            padding: 0.8rem 2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .hero .cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px var(--glow);
+            text-decoration: none;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           NAV (sticky sidebar on desktop, top bar on mobile)
+           ═══════════════════════════════════════════════════════════════ */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 220px;
+            height: 100vh;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border);
+            z-index: 100;
+            padding: 1.5rem 0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            transform: translateX(-100%);
+            transition: transform 0.3s;
+        }
+        nav.open { transform: translateX(0); }
+
+        nav a {
+            display: block;
+            padding: 0.55rem 1.2rem;
+            font-size: 0.82rem;
+            color: var(--text-dim);
+            transition: color 0.2s, border-left 0.2s;
+            border-left: 3px solid transparent;
+        }
+        nav a:hover, nav a.active {
+            color: var(--accent);
+            border-left-color: var(--accent);
+            text-decoration: none;
+            background: rgba(108,99,255,0.06);
+        }
+
+        .nav-toggle {
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 200;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text);
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @media (min-width: 1100px) {
+            nav { transform: translateX(0); }
+            .nav-toggle { display: none; }
+            main { margin-left: 220px; }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           SECTIONS
+           ═══════════════════════════════════════════════════════════════ */
+        main { max-width: 960px; margin: 0 auto; padding: 0 1.5rem; }
+
+        section {
+            padding: 5rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-label {
+            font-size: 0.7rem;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        section h2 {
+            font-size: clamp(1.6rem, 4vw, 2.2rem);
+            font-weight: 700;
+            color: var(--heading);
+            margin-bottom: 1.2rem;
+        }
+
+        section h3 {
+            font-size: 1.2rem;
+            color: var(--heading);
+            margin: 2rem 0 0.6rem;
+        }
+
+        section h4 {
+            font-size: 1rem;
+            color: var(--accent2);
+            margin-bottom: 0.3rem;
+        }
+
+        section p, section li {
+            margin-bottom: 0.8rem;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           CARDS, GRIDS, TABLES
+           ═══════════════════════════════════════════════════════════════ */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.2rem;
+            margin: 1.5rem 0;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 20px var(--glow);
+        }
+
+        .card .icon {
+            font-size: 1.8rem;
+            margin-bottom: 0.6rem;
+        }
+
+        .card h4 { margin-bottom: 0.4rem; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.9rem;
+        }
+        th, td {
+            text-align: left;
+            padding: 0.7rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        th {
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        td { color: var(--text); }
+        tr:hover td { background: rgba(108,99,255,0.04); }
+
+        /* ═══════════════════════════════════════════════════════════════
+           CODE BLOCKS
+           ═══════════════════════════════════════════════════════════════ */
+        pre {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.2rem 1.5rem;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            margin: 1rem 0;
+        }
+        code {
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            color: #d4d4e8;
+        }
+        .kw  { color: #c678dd; }
+        .str { color: #98c379; }
+        .cm  { color: #5c6370; font-style: italic; }
+        .fn  { color: #61afef; }
+        .num { color: #d19a66; }
+        .op  { color: #56b6c2; }
+
+        /* ═══════════════════════════════════════════════════════════════
+           FLOW DIAGRAMS (CSS)
+           ═══════════════════════════════════════════════════════════════ */
+        .flow {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            align-items: center;
+            justify-content: center;
+            margin: 2rem 0;
+        }
+        .flow-node {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.8rem 1.2rem;
+            text-align: center;
+            min-width: 110px;
+            font-size: 0.85rem;
+        }
+        .flow-node .icon { font-size: 1.4rem; display: block; margin-bottom: 0.3rem; }
+        .flow-arrow { color: var(--accent); font-size: 1.2rem; }
+
+        /* ═══════════════════════════════════════════════════════════════
+           COMPARISON CANVAS
+           ═══════════════════════════════════════════════════════════════ */
+        .comparison-canvas-wrap {
+            width: 100%;
+            height: 420px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 1.5rem 0;
+            position: relative;
+        }
+        .comparison-canvas-wrap canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           INTERACTIVE FRAMEWORK EXPLORER
+           ═══════════════════════════════════════════════════════════════ */
+        .explorer {
+            margin: 2rem 0;
+        }
+        .explorer-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.2rem;
+        }
+        .explorer-tabs button {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .explorer-tabs button:hover {
+            border-color: var(--accent);
+            color: var(--text);
+        }
+        .explorer-tabs button.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+        .explorer-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            min-height: 200px;
+        }
+        .explorer-panel h3 { margin-top: 0; }
+
+        /* ═══════════════════════════════════════════════════════════════
+           RADAR CHART
+           ═══════════════════════════════════════════════════════════════ */
+        .radar-wrap {
+            width: 100%;
+            max-width: 520px;
+            margin: 1.5rem auto;
+        }
+        .radar-wrap canvas { width: 100%; height: auto; }
+
+        /* ═══════════════════════════════════════════════════════════════
+           DECISION FLOWCHART
+           ═══════════════════════════════════════════════════════════════ */
+        .decision-tree {
+            margin: 2rem 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+        .dt-node {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.8rem 1.4rem;
+            text-align: center;
+            font-size: 0.9rem;
+            max-width: 320px;
+            cursor: pointer;
+            transition: all 0.25s;
+            position: relative;
+        }
+        .dt-node:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 15px var(--glow);
+        }
+        .dt-node.question {
+            border-color: var(--accent);
+            color: var(--heading);
+            font-weight: 600;
+        }
+        .dt-node.answer {
+            border-color: var(--accent2);
+            color: var(--accent2);
+        }
+        .dt-connector {
+            width: 2px;
+            height: 28px;
+            background: var(--border);
+        }
+        .dt-branch {
+            display: flex;
+            gap: 1.5rem;
+            align-items: flex-start;
+            justify-content: center;
+        }
+        .dt-branch-arm {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+        .dt-label {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 0.3rem 0;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           TIMELINE
+           ═══════════════════════════════════════════════════════════════ */
+        .timeline {
+            position: relative;
+            margin: 2rem 0;
+            padding-left: 30px;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--border);
+        }
+        .timeline-item {
+            position: relative;
+            margin-bottom: 1.5rem;
+            padding-left: 1rem;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -26px;
+            top: 8px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent);
+            border: 2px solid var(--bg);
+        }
+        .timeline-item .date {
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        .timeline-item h4 {
+            color: var(--heading);
+            margin: 0.2rem 0;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           STEP INDICATORS (numbered)
+           ═══════════════════════════════════════════════════════════════ */
+        .step-list { margin: 1.5rem 0; }
+
+        .step {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .step-num {
+            flex-shrink: 0;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+        .step-body h4 { margin-bottom: 0.3rem; }
+
+        /* ═══════════════════════════════════════════════════════════════
+           INTERACTIVE DEMO (trace viewer)
+           ═══════════════════════════════════════════════════════════════ */
+        .demo-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+        .demo-controls button {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            padding: 0.55rem 1.1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .demo-controls button:hover {
+            border-color: var(--accent);
+            color: var(--text);
+        }
+        .demo-controls button.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .trace-viewer {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1.2rem;
+            min-height: 250px;
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+            font-size: 0.82rem;
+            line-height: 1.8;
+            overflow-y: auto;
+            max-height: 420px;
+        }
+        .trace-line {
+            opacity: 0;
+            animation: traceFade 0.3s forwards;
+        }
+        @keyframes traceFade {
+            to { opacity: 1; }
+        }
+        .trace-line .label {
+            display: inline-block;
+            min-width: 90px;
+            font-weight: 600;
+        }
+        .trace-line .label.thought { color: var(--accent4); }
+        .trace-line .label.action  { color: var(--accent); }
+        .trace-line .label.observe { color: var(--accent2); }
+        .trace-line .label.result  { color: var(--accent3); }
+        .trace-line .label.handoff { color: #e879f9; }
+        .trace-line .label.plan    { color: #f59e0b; }
+
+        /* ═══════════════════════════════════════════════════════════════
+           BADGES / PILLS
+           ═══════════════════════════════════════════════════════════════ */
+        .badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+        }
+        .badge.python { background: #306998; color: #ffe873; }
+        .badge.ts     { background: #3178c6; color: #fff; }
+        .badge.oss    { background: #238636; color: #fff; }
+        .badge.cloud  { background: #f97316; color: #fff; }
+        .badge.new    { background: var(--accent3); color: #fff; }
+
+        /* ═══════════════════════════════════════════════════════════════
+           FOOTER
+           ═══════════════════════════════════════════════════════════════ */
+        footer {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           RESPONSIVE
+           ═══════════════════════════════════════════════════════════════ */
+        @media (max-width: 700px) {
+            .card-grid { grid-template-columns: 1fr; }
+            .flow { flex-direction: column; }
+            .flow-arrow { transform: rotate(90deg); }
+            .dt-branch { flex-direction: column; align-items: center; }
+            table { font-size: 0.78rem; }
+            th, td { padding: 0.5rem 0.6rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- NAV TOGGLE -->
+<button class="nav-toggle" onclick="document.querySelector('nav').classList.toggle('open')" aria-label="Toggle navigation">☰</button>
+
+<!-- SIDEBAR NAV -->
+<nav id="main-nav">
+    <a href="#overview">Overview</a>
+    <a href="#landscape">The Landscape</a>
+    <a href="#anatomy">Anatomy</a>
+    <a href="#langgraph">LangGraph</a>
+    <a href="#crewai">CrewAI</a>
+    <a href="#autogen">AutoGen / AG2</a>
+    <a href="#openai-sdk">OpenAI Agents SDK</a>
+    <a href="#others">Emerging Frameworks</a>
+    <a href="#protocols">MCP & A2A</a>
+    <a href="#comparison">Head-to-Head</a>
+    <a href="#choosing">Choosing a Framework</a>
+    <a href="#demo">Live Demo</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero" id="top">
+    <canvas id="heroCanvas"></canvas>
+    <div class="hero-content">
+        <span class="tag">Visual Technical Guide</span>
+        <h1>Agentic <em>Frameworks</em> Explained</h1>
+        <p>A comprehensive visual breakdown of every major agentic AI framework — their architectures, tradeoffs, and how to choose between them for production systems.</p>
+        <a href="#overview" class="cta">Begin the Deep Dive</a>
+    </div>
+</div>
+
+<main>
+
+<!-- ================================================================
+     01 — OVERVIEW
+     ================================================================ -->
+<section id="overview">
+    <div class="section-label">01 OVERVIEW</div>
+    <h2>What Are Agentic Frameworks?</h2>
+    <p>An agentic framework is a software toolkit that provides the scaffolding for building autonomous AI agents — systems that can perceive, reason, plan, act via tools, and learn from observations in a loop. Rather than building the orchestration, memory management, tool routing, and error handling from scratch, frameworks give you pre-built primitives that handle the hard parts.</p>
+    <p>The ecosystem has exploded since 2023. From a handful of early libraries, we now have dozens of frameworks spanning the spectrum from low-level graph engines to high-level role-playing crew abstractions. Each makes fundamentally different architectural choices that shape what's easy, what's possible, and what's painful.</p>
+
+    <div class="flow">
+        <div class="flow-node"><span class="icon">📝</span>Define Agents</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node"><span class="icon">🔧</span>Register Tools</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node"><span class="icon">🧠</span>Wire Orchestration</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node"><span class="icon">💾</span>Manage State</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node"><span class="icon">🚀</span>Deploy & Monitor</div>
+    </div>
+
+    <table>
+        <thead>
+            <tr><th>Dimension</th><th>What Frameworks Provide</th><th>What You Still Build</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>Orchestration</strong></td><td>Agent loop, state machines, routing</td><td>Business logic, stopping conditions</td></tr>
+            <tr><td><strong>Tool Integration</strong></td><td>Schemas, validation, dispatch</td><td>Actual tool implementations</td></tr>
+            <tr><td><strong>Memory</strong></td><td>Context management, vector store adapters</td><td>Retrieval strategies, chunk design</td></tr>
+            <tr><td><strong>Multi-Agent</strong></td><td>Communication protocols, delegation</td><td>Agent roles, collaboration patterns</td></tr>
+            <tr><td><strong>Observability</strong></td><td>Tracing, logging hooks</td><td>Dashboards, alerting, evaluations</td></tr>
+        </tbody>
+    </table>
+</section>
+
+<!-- ================================================================
+     02 — THE LANDSCAPE
+     ================================================================ -->
+<section id="landscape">
+    <div class="section-label">02 THE LANDSCAPE</div>
+    <h2>A Map of the Ecosystem</h2>
+    <p>The agentic framework space can be organized into distinct categories based on their core design philosophy. Understanding where each framework sits helps you narrow the field before diving into specifics.</p>
+
+    <div class="card-grid">
+        <div class="card">
+            <div class="icon">🔗</div>
+            <h4>General-Purpose Orchestrators</h4>
+            <p>Flexible chain-and-tool systems for single-agent workflows. <strong>LangChain</strong>, <strong>LlamaIndex</strong>, <strong>Haystack</strong>, <strong>Smolagents</strong> (HuggingFace).</p>
+        </div>
+        <div class="card">
+            <div class="icon">📊</div>
+            <h4>Graph & Workflow Engines</h4>
+            <p>State machines with explicit nodes, edges, and conditional routing. <strong>LangGraph</strong>, <strong>Prefect</strong>, <strong>Temporal</strong>, <strong>n8n</strong>.</p>
+        </div>
+        <div class="card">
+            <div class="icon">👥</div>
+            <h4>Multi-Agent Collaboration</h4>
+            <p>Role-based crews and conversational agent patterns. <strong>CrewAI</strong>, <strong>AutoGen/AG2</strong>, <strong>MetaGPT</strong>, <strong>OpenAI Swarm</strong>, <strong>OpenAgents</strong>.</p>
+        </div>
+        <div class="card">
+            <div class="icon">🏢</div>
+            <h4>Enterprise / Vendor Platforms</h4>
+            <p>Managed infrastructure with built-in tools. <strong>OpenAI Agents SDK</strong>, <strong>Google ADK</strong>, <strong>AWS Bedrock Agents</strong>, <strong>Azure AI Agent Service</strong>.</p>
+        </div>
+        <div class="card">
+            <div class="icon">🧩</div>
+            <h4>Type-Safe & Minimal</h4>
+            <p>Lightweight, validation-first approaches. <strong>Pydantic AI</strong>, <strong>Atomic Agents</strong>, <strong>Mastra</strong> (TypeScript).</p>
+        </div>
+        <div class="card">
+            <div class="icon">🎨</div>
+            <h4>Low-Code / Visual Builders</h4>
+            <p>Drag-and-drop agent creation for non-developers. <strong>Langflow</strong>, <strong>Flowise</strong>, <strong>CrewAI Studio</strong>, <strong>AutoGen Studio</strong>.</p>
+        </div>
+    </div>
+
+    <h3>Evolution Timeline</h3>
+    <div class="timeline">
+        <div class="timeline-item">
+            <div class="date">Late 2022</div>
+            <h4>LangChain launches</h4>
+            <p>The first major LLM orchestration framework. Chains, tools, and memory abstractions kick-start the ecosystem.</p>
+        </div>
+        <div class="timeline-item">
+            <div class="date">Mid 2023</div>
+            <h4>AutoGen & multi-agent era</h4>
+            <p>Microsoft Research releases AutoGen, pioneering conversational multi-agent patterns. BabyAGI and AgentGPT capture imaginations.</p>
+        </div>
+        <div class="timeline-item">
+            <div class="date">Late 2023</div>
+            <h4>CrewAI & role-based agents</h4>
+            <p>CrewAI introduces the intuitive "crew" metaphor — define agent roles, backstories, and goals, then let them collaborate.</p>
+        </div>
+        <div class="timeline-item">
+            <div class="date">2024</div>
+            <h4>LangGraph & graph orchestration</h4>
+            <p>LangChain releases LangGraph for stateful, graph-based workflows. The shift from chains to explicit state machines begins.</p>
+        </div>
+        <div class="timeline-item">
+            <div class="date">Mar 2025</div>
+            <h4>OpenAI Agents SDK</h4>
+            <p>OpenAI releases a minimalist agent framework with built-in tracing, guardrails, and handoffs. Hits 19k+ GitHub stars rapidly.</p>
+        </div>
+        <div class="timeline-item">
+            <div class="date">2025–2026</div>
+            <h4>Protocol era: MCP & A2A</h4>
+            <p>The Model Context Protocol and Agent-to-Agent protocols emerge as interoperability standards. Frameworks begin converging on open protocols.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================
+     03 — ANATOMY
+     ================================================================ -->
+<section id="anatomy">
+    <div class="section-label">03 ANATOMY</div>
+    <h2>Common Architecture Patterns</h2>
+    <p>Despite their diversity, every agentic framework must solve the same set of core problems. The differences lie in <em>how</em> they solve them — and those design choices ripple through everything from developer experience to production reliability.</p>
+
+    <div class="card-grid">
+        <div class="card">
+            <div class="icon">🔄</div>
+            <h4>The Agent Loop</h4>
+            <p>Every framework implements some variant of Perceive → Reason → Act → Observe. The key differentiator is whether this loop is <strong>implicit</strong> (framework-managed) or <strong>explicit</strong> (developer-controlled via graphs or state machines).</p>
+        </div>
+        <div class="card">
+            <div class="icon">📐</div>
+            <h4>State Management</h4>
+            <p>How intermediate results, plans, and conversation history are tracked across steps. Ranges from simple message lists to typed state objects with reducer functions for concurrent merges.</p>
+        </div>
+        <div class="card">
+            <div class="icon">🔧</div>
+            <h4>Tool Abstraction</h4>
+            <p>The interface between the LLM and external functions. Most frameworks use JSON Schema definitions. Some use native function calling, others use text-based parsing. MCP is emerging as a universal tool protocol.</p>
+        </div>
+        <div class="card">
+            <div class="icon">🤝</div>
+            <h4>Agent Communication</h4>
+            <p>How multiple agents coordinate. Models include: <strong>hierarchical</strong> (supervisor delegates), <strong>peer-to-peer</strong> (shared message bus), <strong>sequential pipeline</strong> (chain of responsibility), and <strong>conversation</strong> (agents chat with each other).</p>
+        </div>
+    </div>
+
+    <h3>Three Schools of Thought</h3>
+    <div class="step-list">
+        <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-body">
+                <h4>Graph-First (LangGraph)</h4>
+                <p>Model workflows as directed graphs with typed state. Nodes are computation steps, edges carry conditional routing logic. Maximum control and debuggability, but steeper learning curve. You reason about your agent the way you'd reason about a state machine.</p>
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-body">
+                <h4>Role-First (CrewAI)</h4>
+                <p>Define agents by their role, goal, and backstory — then let the framework handle orchestration. Intuitive for business workflows where you think in terms of "the researcher, the analyst, the writer." Lower barrier to entry, less fine-grained control.</p>
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-body">
+                <h4>Conversation-First (AutoGen/AG2)</h4>
+                <p>Agents are participants in a conversation. Multi-agent coordination happens through structured dialogue, debate, and consensus-building. Natural for scenarios involving iterative reasoning, peer review, or group decision-making.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================
+     04 — LANGGRAPH
+     ================================================================ -->
+<section id="langgraph">
+    <div class="section-label">04 LANGGRAPH</div>
+    <h2>LangGraph — Graph-Based State Machines</h2>
+    <p><span class="badge oss">Open Source</span> <span class="badge python">Python</span> <span class="badge ts">TypeScript</span></p>
+
+    <p>LangGraph is the low-level workhorse of the LangChain ecosystem. It models agent workflows as directed graphs with explicit nodes, edges, state transitions, and conditional routing. It reached v1.0 in late 2025 and has become the default runtime for all LangChain agents.</p>
+
+    <h3>Core Concepts</h3>
+    <div class="card-grid">
+        <div class="card">
+            <h4>Nodes</h4>
+            <p>Individual computation steps — an LLM call, a tool invocation, a data transformation. Each node receives the current state and returns updates.</p>
+        </div>
+        <div class="card">
+            <h4>Edges</h4>
+            <p>Connections between nodes. <strong>Conditional edges</strong> inspect state to decide the next node — this is where branching and loop-back logic lives.</p>
+        </div>
+        <div class="card">
+            <h4>State</h4>
+            <p>A typed object (typically a TypedDict or Pydantic model) that flows through the graph. Reducer functions merge concurrent updates safely.</p>
+        </div>
+    </div>
+
+    <h3>Key Strengths</h3>
+    <p><strong>Durable execution</strong> — agents can persist through failures and resume automatically. <strong>Human-in-the-loop</strong> support lets you inspect and modify state at breakpoints. <strong>Comprehensive memory</strong> spanning short-term working memory and long-term persistent stores. Full integration with the LangChain ecosystem of 700+ tool connectors.</p>
+
+    <pre><code><span class="cm">// Simplified LangGraph workflow structure</span>
+<span class="kw">from</span> langgraph.graph <span class="kw">import</span> StateGraph, END
+
+<span class="cm"># Define typed state</span>
+<span class="kw">class</span> <span class="fn">AgentState</span>(TypedDict):
+    messages: list[BaseMessage]
+    next_step: str
+
+<span class="cm"># Build graph</span>
+graph = <span class="fn">StateGraph</span>(AgentState)
+graph.<span class="fn">add_node</span>(<span class="str">"reason"</span>, reason_node)
+graph.<span class="fn">add_node</span>(<span class="str">"act"</span>, tool_node)
+graph.<span class="fn">add_node</span>(<span class="str">"respond"</span>, response_node)
+
+<span class="cm"># Conditional routing</span>
+graph.<span class="fn">add_conditional_edges</span>(<span class="str">"reason"</span>, route_fn,
+    {<span class="str">"tool_call"</span>: <span class="str">"act"</span>, <span class="str">"done"</span>: <span class="str">"respond"</span>})
+graph.<span class="fn">add_edge</span>(<span class="str">"act"</span>, <span class="str">"reason"</span>)   <span class="cm"># loop back</span>
+graph.<span class="fn">add_edge</span>(<span class="str">"respond"</span>, END)
+
+app = graph.<span class="fn">compile</span>(checkpointer=MemorySaver())</code></pre>
+
+    <h3>Best For</h3>
+    <p>Production-grade agents requiring fault tolerance, precise state management, and complex branching logic. Teams already invested in LangChain who need durable, long-running workflows with human oversight.</p>
+</section>
+
+<!-- ================================================================
+     05 — CREWAI
+     ================================================================ -->
+<section id="crewai">
+    <div class="section-label">05 CREWAI</div>
+    <h2>CrewAI — Role-Based Agent Teams</h2>
+    <p><span class="badge oss">Open Source</span> <span class="badge python">Python</span> <span class="badge new">Enterprise Tier</span></p>
+
+    <p>CrewAI models multi-agent collaboration as a team ("crew") of role-playing agents. You define each agent's role, backstory, and goal, then assemble them into a crew with a set of tasks. The agents communicate naturally and can delegate work to each other.</p>
+
+    <h3>Two Architecture Modes</h3>
+    <div class="card-grid">
+        <div class="card">
+            <h4>Crews (Autonomous)</h4>
+            <p>Agents have true agency — they decide when to delegate, when to ask questions, and how to approach their tasks. Best for exploratory, creative, or research-oriented workflows.</p>
+        </div>
+        <div class="card">
+            <h4>Flows (Event-Driven)</h4>
+            <p>Production-oriented pipelines with more predictability. Tasks execute in defined sequences with explicit handoff points. Better for workflows that need repeatability and auditability.</p>
+        </div>
+    </div>
+
+    <pre><code><span class="cm">// CrewAI role-based pattern</span>
+<span class="kw">from</span> crewai <span class="kw">import</span> Agent, Task, Crew
+
+researcher = <span class="fn">Agent</span>(
+    role=<span class="str">"Senior Research Analyst"</span>,
+    goal=<span class="str">"Find comprehensive data on the topic"</span>,
+    backstory=<span class="str">"Expert analyst with 10 years experience..."</span>,
+    tools=[search_tool, scrape_tool]
+)
+
+writer = <span class="fn">Agent</span>(
+    role=<span class="str">"Technical Writer"</span>,
+    goal=<span class="str">"Transform research into clear documentation"</span>,
+    backstory=<span class="str">"Award-winning technical communicator..."</span>
+)
+
+crew = <span class="fn">Crew</span>(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    verbose=<span class="num">True</span>
+)
+result = crew.<span class="fn">kickoff</span>()</code></pre>
+
+    <h3>Key Strengths</h3>
+    <p><strong>Fastest time to "hello world"</strong> — the role/goal/backstory pattern is immediately intuitive. Built-in <strong>task replay</strong> lets you re-run specific tasks with tweaked prompts. Enterprise features include observability, a visual studio (CrewAI Studio), and a paid control plane for deployment and monitoring.</p>
+
+    <h3>Best For</h3>
+    <p>Teams wanting an intuitive way to model agent teams with clear roles. Business workflow automation, content pipelines, and research workflows where the "who does what" is the natural way to think about the problem.</p>
+</section>
+
+<!-- ================================================================
+     06 — AUTOGEN / AG2
+     ================================================================ -->
+<section id="autogen">
+    <div class="section-label">06 AUTOGEN / AG2</div>
+    <h2>AutoGen / AG2 — Conversational Multi-Agent</h2>
+    <p><span class="badge oss">Open Source</span> <span class="badge python">Python</span></p>
+
+    <p>Originally created by Microsoft Research, AutoGen pioneered multi-agent conversation patterns. In late 2024, the project transitioned to the independent AG2 community. The core idea: agents are participants in structured conversations, and complex tasks emerge from their dialogue.</p>
+
+    <h3>Core Concepts</h3>
+    <div class="card-grid">
+        <div class="card">
+            <h4>Conversable Agents</h4>
+            <p>Every agent can send and receive messages. Types include AssistantAgent (LLM-backed), UserProxyAgent (human or code executor), and custom agents.</p>
+        </div>
+        <div class="card">
+            <h4>Group Chat</h4>
+            <p>Multiple agents participate in structured discussions. A GroupChatManager controls turn-taking, termination conditions, and topic routing.</p>
+        </div>
+        <div class="card">
+            <h4>Code Execution</h4>
+            <p>Built-in sandboxed code execution lets agents write, run, and debug code collaboratively — ideal for data analysis, prototyping, and research.</p>
+        </div>
+    </div>
+
+    <h3>Key Strengths</h3>
+    <p>Excellent for <strong>iterative reasoning</strong> where agents critique and improve each other's work. Supports diverse chat topologies — two-agent, group, nested conversations. <strong>AutoGen Studio</strong> provides a no-code visual interface. Fully open source with no paid tier.</p>
+
+    <h3>Considerations</h3>
+    <p>The transition from AutoGen to AG2 fragmented some community resources. Best suited for prototyping and research; production deployment requires more manual infrastructure work compared to LangGraph or CrewAI Enterprise.</p>
+</section>
+
+<!-- ================================================================
+     07 — OPENAI AGENTS SDK
+     ================================================================ -->
+<section id="openai-sdk">
+    <div class="section-label">07 OPENAI AGENTS SDK</div>
+    <h2>OpenAI Agents SDK — Minimalist & Production-Ready</h2>
+    <p><span class="badge oss">Open Source</span> <span class="badge python">Python</span> <span class="badge ts">TypeScript</span> <span class="badge new">Mar 2025</span></p>
+
+    <p>Released in March 2025 as the successor to the experimental Swarm SDK, the OpenAI Agents SDK takes an opinionated, minimalist approach. Clean abstractions, built-in tracing, guardrails, and a focus on making simple things simple.</p>
+
+    <h3>Core Primitives</h3>
+    <div class="card-grid">
+        <div class="card">
+            <h4>Agents</h4>
+            <p>LLM-backed units with instructions, tools, and optional guardrails. Configured with a model, system prompt, and tool list.</p>
+        </div>
+        <div class="card">
+            <h4>Handoffs</h4>
+            <p>First-class support for passing control between agents. One agent can hand off to another when the task shifts domain — a triage agent routing to specialists.</p>
+        </div>
+        <div class="card">
+            <h4>Guardrails</h4>
+            <p>Built-in validation and safety mechanisms. Input guardrails check user messages; output guardrails validate agent responses before delivery.</p>
+        </div>
+    </div>
+
+    <pre><code><span class="cm">// OpenAI Agents SDK — handoff pattern</span>
+<span class="kw">from</span> agents <span class="kw">import</span> Agent, Runner
+
+billing_agent = <span class="fn">Agent</span>(
+    name=<span class="str">"Billing Specialist"</span>,
+    instructions=<span class="str">"Handle billing inquiries..."</span>,
+    tools=[lookup_invoice, process_refund]
+)
+
+triage = <span class="fn">Agent</span>(
+    name=<span class="str">"Triage"</span>,
+    instructions=<span class="str">"Route to the right specialist."</span>,
+    handoffs=[billing_agent, tech_agent, sales_agent]
+)
+
+result = <span class="kw">await</span> <span class="fn">Runner.run</span>(triage, <span class="str">"I need a refund"</span>)</code></pre>
+
+    <h3>Key Strengths</h3>
+    <p>Lowest boilerplate of any framework — a working agent in under 10 lines. Built-in <strong>tracing and debugging</strong> with visualisation tools. Despite the OpenAI branding, it supports 100+ LLM providers via compatible endpoints. First-class tools include web search, file search, and code interpreter.</p>
+
+    <h3>Considerations</h3>
+    <p>Tightest integration and best experience is with OpenAI models. For complex stateful workflows with durable execution, LangGraph remains a better fit. Focused on practical agent systems rather than deeply complex orchestration.</p>
+</section>
+
+<!-- ================================================================
+     08 — EMERGING FRAMEWORKS
+     ================================================================ -->
+<section id="others">
+    <div class="section-label">08 EMERGING FRAMEWORKS</div>
+    <h2>Other Notable Frameworks</h2>
+
+    <div class="card-grid">
+        <div class="card">
+            <h4>Pydantic AI <span class="badge new">Rising</span></h4>
+            <p>Built by the Pydantic team. Type-safe, validation-first agent development. If you love Pydantic's approach to data modelling, this brings the same rigour to agent outputs. Extremely clean API, excellent for structured extraction workflows.</p>
+        </div>
+        <div class="card">
+            <h4>Google ADK <span class="badge cloud">Cloud</span></h4>
+            <p>Agent Development Kit announced at Google Cloud NEXT 2025. Optimised for Gemini but model-agnostic via LiteLLM. Unique capabilities include bidirectional audio/video streaming. Seamless Vertex AI deployment.</p>
+        </div>
+        <div class="card">
+            <h4>Smolagents (HuggingFace)</h4>
+            <p>Lightweight, research-oriented framework from HuggingFace. Emphasises "code agents" that write Python code as their action space rather than JSON tool calls. Minimal dependencies, easy to hack on.</p>
+        </div>
+        <div class="card">
+            <h4>Strands Agents (AWS)</h4>
+            <p>Built around MCP for massive tool access. Designed for AWS and already used internally at Amazon. Supports streaming, parallel agents, and cloud-native deployment patterns.</p>
+        </div>
+        <div class="card">
+            <h4>OpenAgents</h4>
+            <p>Purpose-built for agent interoperability via native MCP + A2A protocol support. Agents from different frameworks can discover and collaborate through a shared network. The "internet of agents" vision.</p>
+        </div>
+        <div class="card">
+            <h4>MetaGPT</h4>
+            <p>Domain-specific multi-agent framework for software development. Agents play roles like Product Manager, Architect, and Engineer. Generates full project structures from natural language specs.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================
+     09 — PROTOCOLS: MCP & A2A
+     ================================================================ -->
+<section id="protocols">
+    <div class="section-label">09 PROTOCOLS</div>
+    <h2>MCP & A2A — The Interoperability Layer</h2>
+    <p>Two emerging protocols are reshaping how agentic frameworks connect to the outside world and to each other.</p>
+
+    <div class="card-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+        <div class="card">
+            <div class="icon">🔌</div>
+            <h4>Model Context Protocol (MCP)</h4>
+            <p>Developed by Anthropic, MCP standardises how LLMs connect to external tools and data sources. Think of it as a "USB-C for AI" — one protocol that replaces bespoke integrations for every tool.</p>
+            <p>An MCP server exposes tools, resources, and prompts via a standard JSON-RPC interface. Any MCP-compatible agent can discover and call these tools without custom code. Major frameworks (LangGraph, CrewAI, Strands, Google ADK) now support MCP natively.</p>
+        </div>
+        <div class="card">
+            <div class="icon">🤝</div>
+            <h4>Agent-to-Agent Protocol (A2A)</h4>
+            <p>Proposed by Google, A2A defines how agents communicate with each other — regardless of which framework built them. It covers capability discovery, task delegation, status updates, and result sharing.</p>
+            <p>While MCP connects agents to <em>tools</em>, A2A connects agents to <em>other agents</em>. Together, they form the foundation for a truly interoperable agent ecosystem where a LangGraph agent can collaborate with a CrewAI agent via standard protocols.</p>
+        </div>
+    </div>
+
+    <div class="flow">
+        <div class="flow-node"><span class="icon">🧠</span>Agent A<br><small>(LangGraph)</small></div>
+        <span class="flow-arrow">⇄</span>
+        <div class="flow-node" style="border-color: var(--accent2);"><span class="icon">🤝</span>A2A Protocol</div>
+        <span class="flow-arrow">⇄</span>
+        <div class="flow-node"><span class="icon">🧠</span>Agent B<br><small>(CrewAI)</small></div>
+        <span class="flow-arrow">⇄</span>
+        <div class="flow-node" style="border-color: var(--accent4);"><span class="icon">🔌</span>MCP Server</div>
+        <span class="flow-arrow">⇄</span>
+        <div class="flow-node"><span class="icon">🔧</span>Tool<br><small>(Slack API)</small></div>
+    </div>
+</section>
+
+<!-- ================================================================
+     10 — HEAD-TO-HEAD COMPARISON
+     ================================================================ -->
+<section id="comparison">
+    <div class="section-label">10 HEAD-TO-HEAD</div>
+    <h2>Framework Comparison</h2>
+    <p>Use the interactive explorer below to compare the major frameworks across key dimensions.</p>
+
+    <div class="explorer" id="frameworkExplorer">
+        <div class="explorer-tabs">
+            <button class="active" data-fw="overview">Overview Table</button>
+            <button data-fw="langgraph">LangGraph</button>
+            <button data-fw="crewai">CrewAI</button>
+            <button data-fw="autogen">AG2</button>
+            <button data-fw="openai">OpenAI SDK</button>
+            <button data-fw="pydantic">Pydantic AI</button>
+            <button data-fw="google">Google ADK</button>
+        </div>
+        <div class="explorer-panel" id="explorerPanel">
+            <!-- Populated by JS -->
+        </div>
+    </div>
+
+    <h3>Radar Comparison</h3>
+    <p>This radar chart compares the top four frameworks across six dimensions. Hover or tap a framework name to highlight it.</p>
+    <div class="radar-wrap">
+        <canvas id="radarCanvas" width="520" height="520"></canvas>
+    </div>
+    <div style="display:flex; flex-wrap:wrap; gap:1rem; justify-content:center; margin-top:0.5rem; font-size:0.85rem;">
+        <span style="color:#6c63ff;">● LangGraph</span>
+        <span style="color:#00d4aa;">● CrewAI</span>
+        <span style="color:#ff6b6b;">● AG2</span>
+        <span style="color:#ffd93d;">● OpenAI SDK</span>
+    </div>
+</section>
+
+<!-- ================================================================
+     11 — CHOOSING
+     ================================================================ -->
+<section id="choosing">
+    <div class="section-label">11 CHOOSING</div>
+    <h2>How to Choose a Framework</h2>
+    <p>Walk through the decision tree below. Your answers will guide you toward the right framework for your use case.</p>
+
+    <div class="decision-tree" id="decisionTree">
+        <!-- Populated by JS -->
+    </div>
+
+    <h3>Summary Recommendations</h3>
+    <div class="step-list">
+        <div class="step">
+            <div class="step-num" style="background:var(--accent);">→</div>
+            <div class="step-body">
+                <h4>Need precise state control & durability?</h4>
+                <p><strong>LangGraph.</strong> The graph-based model gives you fine-grained control over complex, stateful workflows with built-in persistence and human-in-the-loop.</p>
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-num" style="background:var(--accent2);">→</div>
+            <div class="step-body">
+                <h4>Want intuitive role-based agent teams?</h4>
+                <p><strong>CrewAI.</strong> Fastest setup, role-based abstraction is easy to reason about. Great for business workflow automation and content pipelines.</p>
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-num" style="background:var(--accent3);">→</div>
+            <div class="step-body">
+                <h4>Building conversational multi-agent debates?</h4>
+                <p><strong>AG2 (AutoGen).</strong> Diverse chat patterns, group decision-making, iterative reasoning. Fully free and open-source.</p>
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-num" style="background:var(--accent4);">→</div>
+            <div class="step-body">
+                <h4>Want minimal boilerplate with great DX?</h4>
+                <p><strong>OpenAI Agents SDK</strong> for the OpenAI stack, or <strong>Pydantic AI</strong> for type-safe, model-agnostic simplicity.</p>
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-num" style="background:#e879f9;">→</div>
+            <div class="step-body">
+                <h4>Need cross-framework agent interoperability?</h4>
+                <p><strong>OpenAgents</strong> with native MCP + A2A. Purpose-built for persistent agent networks where agents from different frameworks discover and collaborate.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================
+     12 — LIVE DEMO
+     ================================================================ -->
+<section id="demo">
+    <div class="section-label">12 INTERACTIVE DEMO</div>
+    <h2>Watch Framework Patterns in Action</h2>
+    <p>Select a framework pattern below to see a step-by-step execution trace showing how each framework would handle the same task: <em>"Research the latest AI chip benchmarks and create a summary report."</em></p>
+
+    <div class="demo-controls" id="demoControls">
+        <button class="active" data-demo="langgraph">📊 LangGraph</button>
+        <button data-demo="crewai">👥 CrewAI</button>
+        <button data-demo="autogen">💬 AG2 (AutoGen)</button>
+        <button data-demo="openai">⚡ OpenAI SDK</button>
+    </div>
+
+    <div class="trace-viewer" id="traceViewer">
+        <!-- Populated by JS -->
+    </div>
+</section>
+
+</main>
+
+<footer>
+    Agentic Frameworks — A Visual Deep Dive<br>
+    Built for understanding. Open source on GitHub Pages.
+</footer>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     JAVASCRIPT
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+// ────────────────────────────────────────────
+// HERO CANVAS — animated network graph
+// ────────────────────────────────────────────
+(function() {
+    const c = document.getElementById('heroCanvas');
+    const ctx = c.getContext('2d');
+    let W, H;
+    const nodes = [];
+    const N = 50;
+
+    function resize() {
+        W = c.width = c.offsetWidth * devicePixelRatio;
+        H = c.height = c.offsetHeight * devicePixelRatio;
+        ctx.scale(devicePixelRatio, devicePixelRatio);
+    }
+
+    function init() {
+        resize();
+        for (let i = 0; i < N; i++) {
+            nodes.push({
+                x: Math.random() * c.offsetWidth,
+                y: Math.random() * c.offsetHeight,
+                vx: (Math.random() - 0.5) * 0.4,
+                vy: (Math.random() - 0.5) * 0.4,
+                r: Math.random() * 2 + 1.5
+            });
+        }
+        animate();
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, c.offsetWidth, c.offsetHeight);
+        const w = c.offsetWidth, h = c.offsetHeight;
+        // Update
+        for (const n of nodes) {
+            n.x += n.vx; n.y += n.vy;
+            if (n.x < 0 || n.x > w) n.vx *= -1;
+            if (n.y < 0 || n.y > h) n.vy *= -1;
+        }
+        // Edges
+        for (let i = 0; i < N; i++) {
+            for (let j = i + 1; j < N; j++) {
+                const dx = nodes[i].x - nodes[j].x;
+                const dy = nodes[i].y - nodes[j].y;
+                const d = Math.sqrt(dx*dx + dy*dy);
+                if (d < 150) {
+                    ctx.strokeStyle = `rgba(108,99,255,${0.15 * (1 - d/150)})`;
+                    ctx.lineWidth = 0.8;
+                    ctx.beginPath();
+                    ctx.moveTo(nodes[i].x, nodes[i].y);
+                    ctx.lineTo(nodes[j].x, nodes[j].y);
+                    ctx.stroke();
+                }
+            }
+        }
+        // Nodes
+        for (const n of nodes) {
+            ctx.fillStyle = 'rgba(108,99,255,0.6)';
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, n.r, 0, Math.PI*2);
+            ctx.fill();
+        }
+        requestAnimationFrame(animate);
+    }
+
+    window.addEventListener('resize', () => {
+        resize();
+    });
+    init();
+})();
+
+// ────────────────────────────────────────────
+// NAV ACTIVE STATE
+// ────────────────────────────────────────────
+(function() {
+    const links = document.querySelectorAll('nav a');
+    const sections = [...document.querySelectorAll('section')];
+
+    window.addEventListener('scroll', () => {
+        const y = window.scrollY + 120;
+        let current = '';
+        for (const s of sections) {
+            if (s.offsetTop <= y) current = s.id;
+        }
+        links.forEach(a => {
+            a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+        });
+    });
+
+    // Close nav on link click (mobile)
+    links.forEach(a => a.addEventListener('click', () => {
+        document.querySelector('nav').classList.remove('open');
+    }));
+})();
+
+// ────────────────────────────────────────────
+// FRAMEWORK EXPLORER (tabbed panels)
+// ────────────────────────────────────────────
+(function() {
+    const data = {
+        overview: `
+            <h3>Framework Comparison Matrix</h3>
+            <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr><th>Framework</th><th>Architecture</th><th>Multi-Agent</th><th>Learning Curve</th><th>Production Ready</th><th>MCP Support</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>LangGraph</strong></td><td>Graph state machine</td><td>Via multi-graph</td><td>Steep</td><td>★★★★★</td><td>Yes</td></tr>
+                    <tr><td><strong>CrewAI</strong></td><td>Role-based crews</td><td>Native</td><td>Easy</td><td>★★★★☆</td><td>Yes</td></tr>
+                    <tr><td><strong>AG2 (AutoGen)</strong></td><td>Conversation patterns</td><td>Native</td><td>Medium</td><td>★★★☆☆</td><td>Partial</td></tr>
+                    <tr><td><strong>OpenAI SDK</strong></td><td>Agents + Handoffs</td><td>Via handoffs</td><td>Easy</td><td>★★★★☆</td><td>Via tools</td></tr>
+                    <tr><td><strong>Pydantic AI</strong></td><td>Type-safe agents</td><td>Composable</td><td>Easy</td><td>★★★★☆</td><td>Partial</td></tr>
+                    <tr><td><strong>Google ADK</strong></td><td>Hierarchical multi-agent</td><td>Native</td><td>Medium</td><td>★★★★☆</td><td>Yes</td></tr>
+                </tbody>
+            </table>
+            </div>
+        `,
+        langgraph: `
+            <h3>LangGraph — Deep Dive</h3>
+            <p><strong>Philosophy:</strong> "Give developers explicit, debuggable control over agent workflows via directed graphs."</p>
+            <table>
+                <tr><th>Aspect</th><th>Detail</th></tr>
+                <tr><td>State</td><td>TypedDict / Pydantic with reducer functions for concurrent merge</td></tr>
+                <tr><td>Persistence</td><td>Built-in checkpointing — resume from any state after failure</td></tr>
+                <tr><td>Human-in-loop</td><td>Breakpoints, state inspection, manual override at any node</td></tr>
+                <tr><td>Memory</td><td>Short-term (working) + long-term (persistent) + cross-thread</td></tr>
+                <tr><td>Platform</td><td>LangGraph Cloud for managed deployment, LangSmith for tracing</td></tr>
+                <tr><td>Languages</td><td>Python, JavaScript/TypeScript</td></tr>
+                <tr><td>GitHub Stars</td><td>~20k+</td></tr>
+            </table>
+            <p><strong>When to avoid:</strong> Simple single-turn agents that don't need state machines. The graph abstraction adds overhead for straightforward use cases.</p>
+        `,
+        crewai: `
+            <h3>CrewAI — Deep Dive</h3>
+            <p><strong>Philosophy:</strong> "Model agent collaboration the way humans think about teams — roles, goals, and backstories."</p>
+            <table>
+                <tr><th>Aspect</th><th>Detail</th></tr>
+                <tr><td>Abstraction</td><td>Agent (role + goal + backstory) → Task → Crew</td></tr>
+                <tr><td>Delegation</td><td>Agents can autonomously delegate to other crew members</td></tr>
+                <tr><td>Replay</td><td>Built-in task replay — re-run specific tasks with tweaked prompts</td></tr>
+                <tr><td>Modes</td><td>Crews (autonomous) and Flows (event-driven pipelines)</td></tr>
+                <tr><td>Enterprise</td><td>CrewAI Studio (visual), Control Plane (deployment/monitoring)</td></tr>
+                <tr><td>A2A Support</td><td>Growing — early adoption of Google's A2A protocol</td></tr>
+            </table>
+            <p><strong>When to avoid:</strong> Workflows requiring precise state machine control or low-level graph routing. CrewAI abstracts away orchestration details.</p>
+        `,
+        autogen: `
+            <h3>AG2 (AutoGen) — Deep Dive</h3>
+            <p><strong>Philosophy:</strong> "Complex behaviours emerge from structured conversations between specialised agents."</p>
+            <table>
+                <tr><th>Aspect</th><th>Detail</th></tr>
+                <tr><td>Core Pattern</td><td>Agents as conversation participants with message-passing</td></tr>
+                <tr><td>Agent Types</td><td>AssistantAgent, UserProxyAgent, GroupChatManager, custom</td></tr>
+                <tr><td>Code Execution</td><td>Built-in sandboxed Python/shell execution for collaborative coding</td></tr>
+                <tr><td>GUI</td><td>AutoGen Studio — no-code visual builder for agent workflows</td></tr>
+                <tr><td>Cost</td><td>Fully free & open-source, no commercial tier</td></tr>
+                <tr><td>Ecosystem</td><td>Transitioned from Microsoft to independent AG2 community</td></tr>
+            </table>
+            <p><strong>When to avoid:</strong> Customer-facing production systems where you need managed infrastructure, durable execution, or enterprise support.</p>
+        `,
+        openai: `
+            <h3>OpenAI Agents SDK — Deep Dive</h3>
+            <p><strong>Philosophy:</strong> "Make simple things simple. Minimal abstractions, maximum developer velocity."</p>
+            <table>
+                <tr><th>Aspect</th><th>Detail</th></tr>
+                <tr><td>Primitives</td><td>Agent, Handoff, Guardrail — that's the core API</td></tr>
+                <tr><td>Tracing</td><td>Built-in observability with visual trace explorer — zero config</td></tr>
+                <tr><td>Tools</td><td>Web search ($25-30/1k queries), file search, code interpreter</td></tr>
+                <tr><td>Model Support</td><td>OpenAI-first, but 100+ LLMs via compatible endpoints</td></tr>
+                <tr><td>Languages</td><td>Python, JavaScript/TypeScript</td></tr>
+                <tr><td>GitHub Stars</td><td>19k+ (rapid growth since Mar 2025 launch)</td></tr>
+            </table>
+            <p><strong>When to avoid:</strong> Complex stateful workflows needing durable execution, or if model portability is critical. Best experience is with OpenAI models.</p>
+        `,
+        pydantic: `
+            <h3>Pydantic AI — Deep Dive</h3>
+            <p><strong>Philosophy:</strong> "Bring the same validation rigour that powers every AI framework's internals to the agent layer itself."</p>
+            <table>
+                <tr><th>Aspect</th><th>Detail</th></tr>
+                <tr><td>Core Strength</td><td>Type-safe structured outputs with Pydantic validation</td></tr>
+                <tr><td>Team</td><td>Built by the Pydantic team (whose library powers OpenAI SDK, Anthropic SDK, LangChain, CrewAI internals)</td></tr>
+                <tr><td>Model Support</td><td>Fully model-agnostic — OpenAI, Anthropic, Gemini, Ollama, etc.</td></tr>
+                <tr><td>Dependencies</td><td>Minimal — Pydantic AI itself is very lightweight</td></tr>
+                <tr><td>Use Cases</td><td>Structured extraction, data pipelines, validation-critical workflows</td></tr>
+            </table>
+            <p><strong>When to avoid:</strong> Multi-agent orchestration or workflows where you need built-in collaboration patterns — it's focused on single-agent quality.</p>
+        `,
+        google: `
+            <h3>Google ADK — Deep Dive</h3>
+            <p><strong>Philosophy:</strong> "Code-first agent development with Google's multimodal AI and cloud infrastructure."</p>
+            <table>
+                <tr><th>Aspect</th><th>Detail</th></tr>
+                <tr><td>Released</td><td>Google Cloud NEXT 2025</td></tr>
+                <tr><td>Model Default</td><td>Optimised for Gemini, model-agnostic via LiteLLM</td></tr>
+                <tr><td>Unique</td><td>Bidirectional audio & video streaming for conversational AI</td></tr>
+                <tr><td>Multi-Agent</td><td>Hierarchical agent architectures built-in</td></tr>
+                <tr><td>Protocol Support</td><td>MCP native, A2A native, LangChain/LlamaIndex/CrewAI integrations</td></tr>
+                <tr><td>Deployment</td><td>Seamless Vertex AI deployment with enterprise infrastructure</td></tr>
+            </table>
+            <p><strong>When to avoid:</strong> If you want to stay cloud-agnostic or avoid Google ecosystem lock-in. Best value when you're already on Google Cloud.</p>
+        `
+    };
+
+    const tabs = document.querySelectorAll('#frameworkExplorer .explorer-tabs button');
+    const panel = document.getElementById('explorerPanel');
+
+    function show(fw) {
+        panel.innerHTML = data[fw] || '';
+        tabs.forEach(t => t.classList.toggle('active', t.dataset.fw === fw));
+    }
+
+    tabs.forEach(t => t.addEventListener('click', () => show(t.dataset.fw)));
+    show('overview');
+})();
+
+// ────────────────────────────────────────────
+// RADAR CHART (Canvas)
+// ────────────────────────────────────────────
+(function() {
+    const canvas = document.getElementById('radarCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = 520, H = 520;
+    const cx = W/2, cy = H/2, R = 180;
+
+    const labels = ['Ease of Use', 'Production Readiness', 'Multi-Agent', 'State Control', 'Ecosystem Size', 'Protocol Support'];
+    const N = labels.length;
+    const angle = (i) => (Math.PI * 2 * i / N) - Math.PI/2;
+
+    const frameworks = [
+        { name: 'LangGraph',  color: '#6c63ff', scores: [0.4, 0.95, 0.6, 0.95, 0.9, 0.85] },
+        { name: 'CrewAI',     color: '#00d4aa', scores: [0.9, 0.8, 0.9, 0.5, 0.7, 0.75] },
+        { name: 'AG2',        color: '#ff6b6b', scores: [0.6, 0.5, 0.85, 0.4, 0.6, 0.4] },
+        { name: 'OpenAI SDK', color: '#ffd93d', scores: [0.95, 0.8, 0.55, 0.5, 0.65, 0.5] },
+    ];
+
+    function draw() {
+        ctx.clearRect(0, 0, W, H);
+
+        // Grid rings
+        for (let ring = 1; ring <= 5; ring++) {
+            const r = R * ring / 5;
+            ctx.beginPath();
+            for (let i = 0; i <= N; i++) {
+                const a = angle(i % N);
+                const x = cx + Math.cos(a) * r;
+                const y = cy + Math.sin(a) * r;
+                i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            }
+            ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+        // Axes
+        for (let i = 0; i < N; i++) {
+            const a = angle(i);
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R);
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            ctx.stroke();
+
+            // Labels
+            const lx = cx + Math.cos(a) * (R + 30);
+            const ly = cy + Math.sin(a) * (R + 30);
+            ctx.fillStyle = '#7a7a8e';
+            ctx.font = '11px system-ui';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(labels[i], lx, ly);
+        }
+
+        // Framework polygons
+        for (const fw of frameworks) {
+            ctx.beginPath();
+            for (let i = 0; i <= N; i++) {
+                const idx = i % N;
+                const a = angle(idx);
+                const r = R * fw.scores[idx];
+                const x = cx + Math.cos(a) * r;
+                const y = cy + Math.sin(a) * r;
+                i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            }
+            ctx.fillStyle = fw.color + '18';
+            ctx.fill();
+            ctx.strokeStyle = fw.color + 'bb';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Points
+            for (let i = 0; i < N; i++) {
+                const a = angle(i);
+                const r = R * fw.scores[i];
+                ctx.beginPath();
+                ctx.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 3.5, 0, Math.PI*2);
+                ctx.fillStyle = fw.color;
+                ctx.fill();
+            }
+        }
+    }
+
+    draw();
+})();
+
+// ────────────────────────────────────────────
+// DECISION TREE (interactive)
+// ────────────────────────────────────────────
+(function() {
+    const container = document.getElementById('decisionTree');
+
+    const tree = {
+        q: "Is your workflow multi-agent or single-agent?",
+        branches: [
+            {
+                label: "Single Agent",
+                q: "Do you need complex branching & state control?",
+                branches: [
+                    { label: "Yes", answer: "LangGraph — explicit graph control over every state transition" },
+                    {
+                        label: "No",
+                        q: "Which LLM provider do you prefer?",
+                        branches: [
+                            { label: "OpenAI", answer: "OpenAI Agents SDK — minimal boilerplate, great DX" },
+                            { label: "Any / Local", answer: "Pydantic AI — type-safe, model-agnostic, lightweight" }
+                        ]
+                    }
+                ]
+            },
+            {
+                label: "Multi-Agent",
+                q: "How should agents coordinate?",
+                branches: [
+                    { label: "Defined roles & tasks", answer: "CrewAI — intuitive role-based team collaboration" },
+                    { label: "Conversation & debate", answer: "AG2 (AutoGen) — structured multi-agent dialogue" },
+                    { label: "Cross-framework interop", answer: "OpenAgents — native MCP + A2A protocols" }
+                ]
+            }
+        ]
+    };
+
+    let currentPath = [];
+
+    function render() {
+        container.innerHTML = '';
+        let node = tree;
+        const depth = 0;
+
+        function renderNode(node, depth) {
+            if (node.answer) {
+                const div = document.createElement('div');
+                div.className = 'dt-node answer';
+                div.textContent = '✅ ' + node.answer;
+                container.appendChild(div);
+                return;
+            }
+
+            // Question
+            const qDiv = document.createElement('div');
+            qDiv.className = 'dt-node question';
+            qDiv.textContent = node.q;
+            container.appendChild(qDiv);
+
+            // Connector
+            const conn = document.createElement('div');
+            conn.className = 'dt-connector';
+            container.appendChild(conn);
+
+            // Branches
+            const branchDiv = document.createElement('div');
+            branchDiv.className = 'dt-branch';
+
+            for (const b of node.branches) {
+                const arm = document.createElement('div');
+                arm.className = 'dt-branch-arm';
+
+                const label = document.createElement('div');
+                label.className = 'dt-label';
+                label.textContent = b.label;
+                arm.appendChild(label);
+
+                const btn = document.createElement('div');
+                btn.className = 'dt-node';
+                btn.style.cursor = 'pointer';
+
+                if (currentPath[depth] === b.label) {
+                    btn.style.borderColor = 'var(--accent)';
+                    btn.style.background = 'rgba(108,99,255,0.1)';
+                }
+
+                if (b.answer) {
+                    btn.textContent = b.label;
+                    btn.addEventListener('click', () => {
+                        currentPath = currentPath.slice(0, depth);
+                        currentPath[depth] = b.label;
+                        render();
+                    });
+                } else {
+                    btn.textContent = b.label;
+                    btn.addEventListener('click', () => {
+                        currentPath = currentPath.slice(0, depth);
+                        currentPath[depth] = b.label;
+                        render();
+                    });
+                }
+
+                arm.appendChild(btn);
+                branchDiv.appendChild(arm);
+            }
+
+            container.appendChild(branchDiv);
+
+            // If a branch is selected at this depth, render next level
+            if (currentPath[depth]) {
+                const selected = node.branches.find(b => b.label === currentPath[depth]);
+                if (selected) {
+                    const conn2 = document.createElement('div');
+                    conn2.className = 'dt-connector';
+                    container.appendChild(conn2);
+                    renderNode(selected, depth + 1);
+                }
+            }
+        }
+
+        renderNode(tree, 0);
+    }
+
+    render();
+})();
+
+// ────────────────────────────────────────────
+// DEMO TRACE VIEWER
+// ────────────────────────────────────────────
+(function() {
+    const traces = {
+        langgraph: [
+            { label: 'plan', text: 'StateGraph compiles. Entry point → "plan" node.' },
+            { label: 'thought', text: 'Node "plan": LLM generates task decomposition → state.tasks = [search_benchmarks, analyze_data, write_report]' },
+            { label: 'action', text: 'Conditional edge routes to "search_benchmarks" node (first incomplete task)' },
+            { label: 'action', text: 'Node "search_benchmarks": Calls web_search(query="latest AI chip benchmarks 2025")' },
+            { label: 'observe', text: 'Tool result: [NVIDIA B200: 4.5x H100, AMD MI350X: 3.2x MI300X, Apple M4 Ultra: 28.3 TOPS/W ...]' },
+            { label: 'thought', text: 'State updated: state.results["benchmarks"] = {...}. Conditional edge checks → next task: "analyze_data"' },
+            { label: 'action', text: 'Node "analyze_data": LLM analyses benchmark data, generates comparison table' },
+            { label: 'observe', text: 'Analysis complete → state.results["analysis"] = {table: [...], insights: [...]}' },
+            { label: 'action', text: 'Conditional edge routes → "write_report" node' },
+            { label: 'action', text: 'Node "write_report": LLM generates structured Markdown report from state.results' },
+            { label: 'result', text: 'All tasks complete → conditional edge routes to END. Report returned to user.' },
+        ],
+        crewai: [
+            { label: 'plan', text: 'Crew assembled: [Research Analyst, Data Scientist, Technical Writer]' },
+            { label: 'thought', text: 'Research Analyst starts Task 1: "Find comprehensive AI chip benchmark data"' },
+            { label: 'action', text: 'Research Analyst → web_search("AI chip benchmarks 2025 comparison")' },
+            { label: 'observe', text: 'Search results: NVIDIA B200, AMD MI350X, Apple M4 Ultra, Google TPU v6 benchmark data found' },
+            { label: 'thought', text: 'Research Analyst → "I need more specific power efficiency data." Calls web_search("AI chip TOPS per watt 2025")' },
+            { label: 'observe', text: 'Additional data retrieved. Research Analyst completes task, passes results to next agent.' },
+            { label: 'handoff', text: 'Task delegation → Data Scientist receives benchmark data' },
+            { label: 'thought', text: 'Data Scientist starts Task 2: "Analyse and create comparison framework"' },
+            { label: 'action', text: 'Data Scientist generates comparison table, performance/watt rankings, and key insights' },
+            { label: 'handoff', text: 'Task delegation → Technical Writer receives analysis' },
+            { label: 'thought', text: 'Technical Writer starts Task 3: "Create executive summary report"' },
+            { label: 'result', text: 'Crew complete. Final report assembled from all agent contributions.' },
+        ],
+        autogen: [
+            { label: 'plan', text: 'GroupChat initiated: [ResearchBot, AnalystBot, WriterBot, UserProxy]' },
+            { label: 'thought', text: 'ResearchBot: "I\'ll start by searching for the latest benchmark data."' },
+            { label: 'action', text: 'ResearchBot → web_search("AI chip benchmarks 2025")' },
+            { label: 'observe', text: 'Search results shared to group chat' },
+            { label: 'thought', text: 'AnalystBot: "The data looks incomplete — we\'re missing inference latency numbers. ResearchBot, can you find those?"' },
+            { label: 'thought', text: 'ResearchBot: "Good point. Let me search specifically for inference latency."' },
+            { label: 'action', text: 'ResearchBot → web_search("AI accelerator inference latency comparison 2025")' },
+            { label: 'observe', text: 'Latency data found and shared' },
+            { label: 'thought', text: 'AnalystBot: "Now I have enough to build the comparison. Key insight: B200 leads throughput but M4 Ultra leads efficiency."' },
+            { label: 'thought', text: 'WriterBot: "I\'ll draft the report. Let me structure it as exec summary → methodology → findings → recommendations."' },
+            { label: 'action', text: 'WriterBot generates draft report' },
+            { label: 'thought', text: 'AnalystBot: "The efficiency section needs more nuance — edge vs data centre use cases differ significantly."' },
+            { label: 'action', text: 'WriterBot revises report based on AnalystBot feedback' },
+            { label: 'result', text: 'GroupChat consensus reached. Final report approved by all agents.' },
+        ],
+        openai: [
+            { label: 'plan', text: 'Triage Agent receives task. Evaluates → research task → handoff to Research Agent' },
+            { label: 'handoff', text: 'Handoff: Triage → Research Agent (instructions: "Find AI chip benchmarks")' },
+            { label: 'action', text: 'Research Agent → web_search("latest AI chip benchmarks 2025")' },
+            { label: 'observe', text: 'Results: NVIDIA B200, AMD MI350X, Apple M4 Ultra benchmark data' },
+            { label: 'action', text: 'Research Agent → web_search("AI accelerator performance comparison")' },
+            { label: 'observe', text: 'Additional comparison data retrieved' },
+            { label: 'thought', text: 'Research Agent: "I have sufficient data. This needs analysis — handing off."' },
+            { label: 'handoff', text: 'Handoff: Research Agent → Analysis Agent' },
+            { label: 'action', text: 'Analysis Agent processes data, generates structured comparison with rankings' },
+            { label: 'thought', text: 'Analysis Agent: "Analysis complete. Handing off for report generation."' },
+            { label: 'handoff', text: 'Handoff: Analysis Agent → Report Agent' },
+            { label: 'action', text: 'Report Agent composes final Markdown report with executive summary' },
+            { label: 'result', text: 'Report Agent returns final answer. Trace logged with full execution timeline.' },
+        ],
+    };
+
+    const viewer = document.getElementById('traceViewer');
+    const buttons = document.querySelectorAll('#demoControls button');
+    let animTimer = null;
+
+    function showTrace(name) {
+        if (animTimer) clearInterval(animTimer);
+        viewer.innerHTML = '';
+        buttons.forEach(b => b.classList.toggle('active', b.dataset.demo === name));
+
+        const lines = traces[name];
+        let idx = 0;
+
+        function addLine() {
+            if (idx >= lines.length) { clearInterval(animTimer); return; }
+            const line = lines[idx];
+            const div = document.createElement('div');
+            div.className = 'trace-line';
+            div.style.animationDelay = '0s';
+            div.innerHTML = `<span class="label ${line.label}">[${line.label.toUpperCase()}]</span> ${line.text}`;
+            viewer.appendChild(div);
+            viewer.scrollTop = viewer.scrollHeight;
+            idx++;
+        }
+
+        animTimer = setInterval(addLine, 600);
+        addLine(); // immediate first line
+    }
+
+    buttons.forEach(b => b.addEventListener('click', () => showTrace(b.dataset.demo)));
+    showTrace('langgraph');
+})();
+</script>
+</body>
+</html>
