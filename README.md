@@ -2,7 +2,7 @@
 
 An interactive, single-page visual guide to the major agentic AI frameworks — their architectures, tradeoffs, and how to choose between them for production systems.
 
-**[View the Live Guide](https://brendanjameslynskey.github.io/Agentic_Frameworks_guide/)**
+**[View the Live Guide](https://brendanjameslynskey.github.io/Agentic_Frameworks_Guide/)**
 
 ## What's Covered
 
